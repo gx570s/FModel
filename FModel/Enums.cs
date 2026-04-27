@@ -92,14 +92,14 @@ public enum FGame
     Gameface,
     [Description("Sea of Thieves")]
     Athena,
-    [Description("DEPRECATED")]
+    [Description("Your Beloved ™ Panda")]
     PandaGame,
-    [Description("MultiVersus")]
-    MultiVersus,
     [Description("Tower of Fantasy")]
     Hotta,
     [Description("eFootball 2023")]
-    eFootball
+    eFootball,
+    [Description("Hogwarts Legacy")]
+    Phoenix,
 }
 
 public enum ELoadingMode

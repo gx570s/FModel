@@ -29,7 +29,9 @@ public class FModelApiEndpoint : AbstractApiProvider
     private readonly IDictionary<string, CommunityDesign> _communityDesigns = new Dictionary<string, CommunityDesign>();
     private ApplicationViewModel _applicationView => ApplicationService.ApplicationView;
 
-    public FModelApiEndpoint(RestClient client) : base(client) { }
+    public FModelApiEndpoint(RestClient client) : base(client)
+    {
+    }
 
     public async Task<News> GetNewsAsync(CancellationToken token, string game)
     {
@@ -178,7 +180,7 @@ public class FModelApiEndpoint : AbstractApiProvider
 
         _applicationView.CUE4Parse.TabControl.AddTab($"Release Notes: {args.CurrentVersion}");
         _applicationView.CUE4Parse.TabControl.SelectedTab.Highlighter = AvalonExtensions.HighlighterSelector("changelog");
-        _applicationView.CUE4Parse.TabControl.SelectedTab.SetDocumentText(response.Content, false, false);
+        _applicationView.CUE4Parse.TabControl.SelectedTab.SetDocumentText(response.Content, false);
         UserSettings.Default.ShowChangelog = false;
     }
 }

@@ -281,16 +281,15 @@ public partial class ImageMerger
         if (File.Exists(path))
         {
             Log.Information("{FileName} successfully saved", fileName);
-            FLogger.Append(ELog.Information, () =>
-            {
-                FLogger.Text("Successfully saved ", Constants.WHITE);
-                FLogger.Link(fileName, path, true);
-            });
+            FLogger.AppendInformation();
+            FLogger.AppendText("Successfully saved ", Constants.WHITE);
+            FLogger.AppendLink(fileName, path, true);
         }
         else
         {
             Log.Error("{FileName} could not be saved", fileName);
-            FLogger.Append(ELog.Error, () => FLogger.Text($"Could not save '{fileName}'", Constants.WHITE, true));
+            FLogger.AppendError();
+            FLogger.AppendText($"Could not save '{fileName}'", Constants.WHITE, true);
         }
     }
 

@@ -18,66 +18,41 @@ public interface ITextFormatter
     void SetText(FlowDocument document, string text);
 }
 
-public enum ELog
-{
-    Information,
-    Warning,
-    Error,
-    Debug,
-    None
-}
-
 public class FLogger : ITextFormatter
 {
     public static CustomRichTextBox Logger;
     private static readonly BrushConverter _brushConverter = new();
-    private static int _previous;
 
-    public static void Append(ELog type, Action job)
+    public static void AppendInformation() => AppendText("[INF] ", Constants.BLUE);
+    public static void AppendWarning() => AppendText("[WRN] ", Constants.YELLOW);
+    public static void AppendError() => AppendText("[ERR] ", Constants.RED);
+    public static void AppendDebug() => AppendText("[DBG] ", Constants.GREEN);
+
+    public static void AppendText(string message, string color, bool newLine = false)
     {
         Application.Current.Dispatcher.Invoke(delegate
         {
-            switch (type)
+            var textRange = new TextRange(Logger.Document.ContentEnd, Logger.Document.ContentEnd)
             {
-                case ELog.Information:
-                    Text("[INF] ", Constants.BLUE);
-                    break;
-                case ELog.Warning:
-                    Text("[WRN] ", Constants.YELLOW);
-                    break;
-                case ELog.Error:
-                    Text("[ERR] ", Constants.RED);
-                    break;
-                case ELog.Debug:
-                    Text("[DBG] ", Constants.GREEN);
-                    break;
-            }
+                Text = newLine ? $"{message}{Environment.NewLine}" : message
+            };
 
-            job();
+            try
+            {
+                textRange.ApplyPropertyValue(TextElement.ForegroundProperty, _brushConverter.ConvertFromString(color));
+            }
+            finally
+            {
+                Logger.ScrollToEnd();
+            }
         });
     }
 
-    public static void Text(string message, string color, bool newLine = false)
+    public static void AppendLink(string message, string url, bool newLine = false)
     {
-        try
+        Application.Current.Dispatcher.Invoke(delegate
         {
-            Logger.Document.ContentEnd.InsertTextInRun(message);
-            if (newLine) Logger.Document.ContentEnd.InsertLineBreak();
-
-            Logger.Selection.Select(Logger.Document.ContentStart.GetPositionAtOffset(_previous), Logger.Document.ContentEnd);
-            Logger.Selection.ApplyPropertyValue(TextElement.ForegroundProperty, _brushConverter.ConvertFromString(color));
-        }
-        finally
-        {
-            Finally();
-        }
-    }
-
-    public static void Link(string message, string url, bool newLine = false)
-    {
-        try
-        {
-            new Hyperlink(new Run(newLine ? $"{message}{Environment.NewLine}" : message), Logger.Document.ContentEnd)
+            var link = new Hyperlink(new Run(newLine ? $"{message}{Environment.NewLine}" : message), Logger.Document.ContentEnd)
             {
                 NavigateUri = new Uri(url),
                 OverridesDefaultStyle = true,
@@ -87,18 +62,17 @@ public class FLogger : ITextFormatter
                     new Setter(TextBlock.TextDecorationsProperty, TextDecorations.Underline),
                     new Setter(TextElement.ForegroundProperty, Brushes.Cornsilk)
                 }}
-            }.Click += (sender, _) => Process.Start("explorer.exe", $"/select, \"{((Hyperlink)sender).NavigateUri.AbsoluteUri}\"");
-        }
-        finally
-        {
-            Finally();
-        }
-    }
+            };
 
-    private static void Finally()
-    {
-        Logger.ScrollToEnd();
-        _previous = Math.Abs(Logger.Document.ContentEnd.GetOffsetToPosition(Logger.Document.ContentStart)) - 2;
+            try
+            {
+                link.Click += (sender, _) => Process.Start("explorer.exe", $"/select, \"{((Hyperlink)sender).NavigateUri.AbsoluteUri}\"");
+            }
+            finally
+            {
+                Logger.ScrollToEnd();
+            }
+        });
     }
 
     public string GetText(FlowDocument document)

@@ -17,23 +17,12 @@ namespace FModel.Views.Snooper;
 
 public class Swap
 {
-    public string Title;
-    public string Description;
     public bool Value;
     public bool IsAware;
-    public Action Content;
-
-    public Swap()
-    {
-        Reset();
-    }
 
     public void Reset()
     {
-        Title = string.Empty;
-        Description = string.Empty;
         Value = false;
-        Content = null;
     }
 }
 
@@ -42,11 +31,6 @@ public class Save
     public bool Value;
     public string Label;
     public string Path;
-
-    public Save()
-    {
-        Reset();
-    }
 
     public void Reset()
     {
@@ -63,7 +47,6 @@ public class SnimGui
     private readonly Save _saver = new ();
     private readonly string _renderer;
     private readonly string _version;
-    private readonly float _tableWidth;
 
     private Vector2 _outlinerSize;
     private bool _ti_open;
@@ -74,15 +57,13 @@ public class SnimGui
     private readonly Vector4 _errorColor = new (0.761f, 0.169f, 0.169f, 1.0f);
 
     private const uint _dockspaceId = 1337;
+    private const float _tableWidth = 17;
 
     public SnimGui(int width, int height)
     {
-        Controller = new ImGuiController(width, height);
-
         _renderer = GL.GetString(StringName.Renderer);
         _version = "OpenGL " + GL.GetString(StringName.Version);
-        _tableWidth = 17 * Controller.DpiScale;
-
+        Controller = new ImGuiController(width, height);
         Theme();
     }
 
@@ -103,88 +84,27 @@ public class SnimGui
         Draw3DViewport(s);
         DrawNavbar();
 
-        DrawModals(s);
-
         if (_ti_open) DrawTextureInspector(s);
         Controller.Render();
-    }
-
-    private void DrawModals(Snooper s)
-    {
-        Modal(_swapper.Title, _swapper.Value, () =>
-        {
-            ImGui.TextWrapped(_swapper.Description);
-            ImGui.Separator();
-
-            ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, Vector2.Zero);
-            ImGui.Checkbox("Got it! Don't show me again", ref _swapper.IsAware);
-            ImGui.PopStyleVar();
-
-            var size = new Vector2(120, 0);
-            if (ImGui.Button("OK", size))
-            {
-                _swapper.Content();
-                _swapper.Reset();
-                ImGui.CloseCurrentPopup();
-                s.WindowShouldClose(true, false);
-            }
-
-            ImGui.SetItemDefaultFocus();
-            ImGui.SameLine();
-
-            if (ImGui.Button("Cancel", size))
-            {
-                _swapper.Reset();
-                ImGui.CloseCurrentPopup();
-            }
-        });
-
-        Modal("Saved", _saver.Value, () =>
-        {
-            ImGui.TextWrapped($"Successfully saved {_saver.Label}");
-            ImGui.Separator();
-
-            var size = new Vector2(120, 0);
-            if (ImGui.Button("OK", size))
-            {
-                _saver.Reset();
-                ImGui.CloseCurrentPopup();
-            }
-
-            ImGui.SetItemDefaultFocus();
-            ImGui.SameLine();
-
-            if (ImGui.Button("Show In Explorer", size))
-            {
-                Process.Start("explorer.exe", $"/select, \"{_saver.Path.Replace('/', '\\')}\"");
-
-                _saver.Reset();
-                ImGui.CloseCurrentPopup();
-            }
-        });
     }
 
     private void DrawWorld(Snooper s)
     {
         if (ImGui.BeginTable("world_details", 2, ImGuiTableFlags.SizingStretchProp))
         {
-            var b = false;
             var length = s.Renderer.Options.Models.Count;
+            Layout("Renderer");ImGui.Text($" :  {_renderer}");
+            Layout("Version");ImGui.Text($" :  {_version}");
+            Layout("Loaded Models");ImGui.Text($" :  x{length}");ImGui.SameLine();
 
-            NoFramePaddingOnY(() =>
+            var b = false;
+            if (ImGui.SmallButton("Save All"))
             {
-                Layout("Renderer");ImGui.Text($" :  {_renderer}");
-                Layout("Version");ImGui.Text($" :  {_version}");
-                Layout("Loaded Models");ImGui.Text($" :  x{length}");ImGui.SameLine();
-
-                if (ImGui.SmallButton("Save All"))
+                foreach (var model in s.Renderer.Options.Models.Values)
                 {
-                    foreach (var model in s.Renderer.Options.Models.Values)
-                    {
-                        b |= s.Renderer.Options.TrySave(model.Export, out _, out _);
-                    }
+                    b |= s.Renderer.Options.TrySave(model.Export, out _, out _);
                 }
-            });
+            }
 
             Modal("Saved", b, () =>
             {
@@ -224,10 +144,8 @@ public class SnimGui
                 ImGui.PopID();Layout("Animate With Rotation Only");ImGui.PushID(4);
                 ImGui.Checkbox("", ref s.Renderer.AnimateWithRotationOnly);
                 ImGui.PopID();Layout("Vertex Colors");ImGui.PushID(5);
-                var c = (int) s.Renderer.Color;
-                ImGui.Combo("vertex_colors", ref c,
-                    "Default\0Sections\0Colors\0Normals\0Texture Coordinates\0");
-                s.Renderer.Color = (VertexColor) c;
+                ImGui.Combo("vertex_colors", ref s.Renderer.VertexColor,
+                    "Default\0Diffuse Only\0Colors\0Normals\0Texture Coordinates\0");
                 ImGui.PopID();
 
                 ImGui.EndTable();
@@ -287,7 +205,7 @@ public class SnimGui
 
 1. UI / UX
     - Press Shift while moving a window to dock it
-    - Double Click in a box to input a new value
+    - Ctrl Click in a box to input a new value
     - Mouse Click + Drag in a box to modify the value without having to type
     - Press H to hide the window and append the next mesh you extract
 
@@ -295,7 +213,6 @@ public class SnimGui
     - WASD to move around
     - Shift to move faster
     - XC to zoom
-    - Z to animate the selected model
     - Left Mouse Button pressed to look around
     - Right Click to select a model in the world
 
@@ -308,7 +225,7 @@ public class SnimGui
         - Teleport to quickly move the camera to the position of the model
         - Delete
         - Deselect
-        - Copy Path to Clipboard
+        - Copy Name to Clipboard
 
 4. World
     - Save All to save all loaded models at once
@@ -318,19 +235,11 @@ public class SnimGui
     5.1. Right Click Section
         - Show / Hide the section
         - Swap to change the material used by this section
-        - Copy Path to Clipboard
+        - Copy Name to Clipboard
     5.2. Transform
         - Move / Rotate / Scale the model in the world
     5.3. Morph Targets
         - Modify the vertices position by a given amount to change the shape of the model
-
-6. Timeline
-    - Press Space to play/pause
-    - Control the time with your mouse
-    6.1 Right Click Section
-        - Animate another loaded model
-        - Save
-        - Copy Path to Clipboard
 ");
             ImGui.Separator();
 
@@ -435,42 +344,30 @@ Snooper aims to give an accurate preview of models, materials, skeletal animatio
                         if (ImGui.MenuItem("Show", null, model.Show)) model.Show = !model.Show;
                         if (ImGui.MenuItem("Wireframe", null, model.Wireframe)) model.Wireframe = !model.Wireframe;
                         ImGui.Separator();
-                        if (ImGui.MenuItem("Save"))
+                        if (ImGui.Selectable("Save"))
                         {
                             s.WindowShouldFreeze(true);
                             _saver.Value = s.Renderer.Options.TrySave(model.Export, out _saver.Label, out _saver.Path);
                             s.WindowShouldFreeze(false);
                         }
-                        if (ImGui.MenuItem("Animate", model.HasSkeleton))
+                        ImGui.BeginDisabled(!model.HasSkeleton);
+                        if (ImGui.Selectable("Animate"))
                         {
-                            if (_swapper.IsAware)
-                            {
-                                s.Renderer.Options.RemoveAnimations();
-                                s.Renderer.Options.AnimateMesh(true);
-                                s.WindowShouldClose(true, false);
-                            }
-                            else
-                            {
-                                _swapper.Title = "Skeletal Animation";
-                                _swapper.Description = "You're about to animate a model.\nThe window will close for you to extract an animation!\n\n";
-                                _swapper.Content = () =>
-                                {
-                                    s.Renderer.Options.RemoveAnimations();
-                                    s.Renderer.Options.AnimateMesh(true);
-                                };
-                                _swapper.Value = true;
-                            }
+                            s.Renderer.Options.RemoveAnimations();
+                            s.Renderer.Options.AnimateMesh(true);
+                            s.WindowShouldClose(true, false);
                         }
-                        if (ImGui.MenuItem("Teleport To"))
+                        ImGui.EndDisabled();
+                        if (ImGui.Selectable("Teleport To"))
                         {
                             var instancePos = model.Transforms[model.SelectedInstance].Matrix.Translation;
                             s.Renderer.CameraOp.Teleport(instancePos, model.Box);
                         }
 
-                        if (ImGui.MenuItem("Delete")) s.Renderer.Options.RemoveModel(guid);
-                        if (ImGui.MenuItem("Deselect")) s.Renderer.Options.SelectModel(Guid.Empty);
+                        if (ImGui.Selectable("Delete")) s.Renderer.Options.RemoveModel(guid);
+                        if (ImGui.Selectable("Deselect")) s.Renderer.Options.SelectModel(Guid.Empty);
                         ImGui.Separator();
-                        if (ImGui.MenuItem("Copy Path to Clipboard")) ImGui.SetClipboardText(model.Path);
+                        if (ImGui.Selectable("Copy Name to Clipboard")) ImGui.SetClipboardText(model.Name);
                     });
 
                     ImGui.TableNextColumn();
@@ -485,6 +382,30 @@ Snooper aims to give an accurate preview of models, materials, skeletal animatio
             }
         });
         ImGui.PopStyleVar();
+
+        Modal("Saved", _saver.Value, () =>
+        {
+            ImGui.TextWrapped($"Successfully saved {_saver.Label}");
+            ImGui.Separator();
+
+            var size = new Vector2(120, 0);
+            if (ImGui.Button("OK", size))
+            {
+                _saver.Reset();
+                ImGui.CloseCurrentPopup();
+            }
+
+            ImGui.SetItemDefaultFocus();
+            ImGui.SameLine();
+
+            if (ImGui.Button("Show In Explorer", size))
+            {
+                Process.Start("explorer.exe", $"/select, \"{_saver.Path.Replace('/', '\\')}\"");
+
+                _saver.Reset();
+                ImGui.CloseCurrentPopup();
+            }
+        });
     }
 
     private void DrawSockets(Snooper s)
@@ -567,10 +488,6 @@ Snooper aims to give an accurate preview of models, materials, skeletal animatio
                         {
                             ImGui.TableSetBgColor(ImGuiTableBgTarget.RowBg0, ImGui.GetColorU32(new Vector4(1, 0, 0, .5f)));
                         }
-                        else if (s.Renderer.Color == VertexColor.Sections)
-                        {
-                            ImGui.TableSetBgColor(ImGuiTableBgTarget.RowBg0, ImGui.GetColorU32(new Vector4(section.Color, 0.5f)));
-                        }
 
                         ImGui.Text(section.MaterialIndex.ToString("D"));
                         ImGui.TableNextColumn();
@@ -582,27 +499,49 @@ Snooper aims to give an accurate preview of models, materials, skeletal animatio
                         {
                             s.Renderer.Options.SelectSection(i);
                             if (ImGui.MenuItem("Show", null, section.Show)) section.Show = !section.Show;
-                            if (ImGui.MenuItem("Swap"))
+                            if (ImGui.Selectable("Swap"))
                             {
                                 if (_swapper.IsAware)
                                 {
                                     s.Renderer.Options.SwapMaterial(true);
                                     s.WindowShouldClose(true, false);
                                 }
-                                else
-                                {
-                                    _swapper.Title = "Material Swap";
-                                    _swapper.Description = "You're about to swap a material.\nThe window will close for you to extract a material!\n\n";
-                                    _swapper.Content = () => s.Renderer.Options.SwapMaterial(true);
-                                    _swapper.Value = true;
-                                }
+                                else _swapper.Value = true;
                             }
                             ImGui.Separator();
-                            if (ImGui.MenuItem("Copy Path to Clipboard")) ImGui.SetClipboardText(material.Path);
+                            if (ImGui.Selectable("Copy Path to Clipboard")) ImGui.SetClipboardText(material.Path);
                         });
                         ImGui.PopID();
                     }
                     ImGui.EndTable();
+
+                    Modal("Swap?", _swapper.Value, () =>
+                    {
+                        ImGui.TextWrapped("You're about to swap a material.\nThe window will close for you to extract a material!\n\n");
+                        ImGui.Separator();
+
+                        ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, Vector2.Zero);
+                        ImGui.Checkbox("Got it! Don't show me again", ref _swapper.IsAware);
+                        ImGui.PopStyleVar();
+
+                        var size = new Vector2(120, 0);
+                        if (ImGui.Button("OK", size))
+                        {
+                            _swapper.Reset();
+                            s.Renderer.Options.SwapMaterial(true);
+                            ImGui.CloseCurrentPopup();
+                            s.WindowShouldClose(true, false);
+                        }
+
+                        ImGui.SetItemDefaultFocus();
+                        ImGui.SameLine();
+
+                        if (ImGui.Button("Cancel", size))
+                        {
+                            _swapper.Reset();
+                            ImGui.CloseCurrentPopup();
+                        }
+                    });
 
                     ImGui.EndTabItem();
                 }
@@ -629,7 +568,7 @@ Snooper aims to give an accurate preview of models, materials, skeletal animatio
 
                         if (ImGui.BeginListBox("", box))
                         {
-                            for (int i = 0; i < model.Morphs.Count; i++)
+                            for (int i = 0; i < model.Morphs.Length; i++)
                             {
                                 ImGui.PushID(i);
                                 if (ImGui.Selectable(model.Morphs[i].Name, s.Renderer.Options.SelectedMorph == i))
@@ -723,7 +662,7 @@ Snooper aims to give an accurate preview of models, materials, skeletal animatio
             s.Renderer.Options.TryGetModel(out var model) &&
             s.Renderer.Options.TryGetSection(model, out var section))
         {
-            (model.Materials[section.MaterialIndex].GetSelectedTexture() ?? s.Renderer.Options.Icons["noimage"]).ImGuiTextureInspector();
+            model.Materials[section.MaterialIndex].ImGuiTextureInspector(s.Renderer.Options.Icons["noimage"]);
         }
         ImGui.End(); // if window is collapsed
     }
@@ -773,10 +712,6 @@ Snooper aims to give an accurate preview of models, materials, skeletal animatio
             float framerate = ImGui.GetIO().Framerate;
             ImGui.SetCursorPos(size with { X = 7.5f });
             ImGui.Text($"FPS: {framerate:0} ({1000.0f / framerate:0.##} ms)");
-
-            const string label = "Previewed content may differ from final version saved or used in-game.";
-            ImGui.SetCursorPos(size with { X = size.X - ImGui.CalcTextSize(label).X - 7.5f });
-            ImGui.TextColored(new Vector4(0.50f, 0.50f, 0.50f, 1.00f), label);
         }, false);
         ImGui.PopStyleVar();
     }

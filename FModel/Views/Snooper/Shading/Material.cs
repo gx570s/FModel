@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
@@ -7,7 +7,6 @@ using CUE4Parse.UE4.Assets.Exports.Texture;
 using CUE4Parse.UE4.Objects.Core.Math;
 using CUE4Parse.UE4.Objects.Core.Misc;
 using FModel.Extensions;
-using FModel.Settings;
 using FModel.Views.Snooper.Models;
 using ImGuiNET;
 using OpenTK.Graphics.OpenGL4;
@@ -67,7 +66,7 @@ public class Material : IDisposable
     {
         Name = unrealMaterial.Name;
         Path = unrealMaterial.GetPathName();
-        unrealMaterial.GetParams(Parameters, UserSettings.Default.MaterialExportFormat);
+        unrealMaterial.GetParams(Parameters, EMaterialFormat.AllLayers);
     }
 
     public void Setup(Options options, int uvCount)
@@ -86,10 +85,11 @@ public class Material : IDisposable
         else
         {
             {   // textures
-                Diffuse = FillTextures(options, uvCount, Parameters.HasTopDiffuse, CMaterialParams2.Diffuse, CMaterialParams2.FallbackDiffuse, true);
-                Normals = FillTextures(options, uvCount, Parameters.HasTopNormals, CMaterialParams2.Normals, CMaterialParams2.FallbackNormals);
-                SpecularMasks = FillTextures(options, uvCount, Parameters.HasTopSpecularMasks, CMaterialParams2.SpecularMasks, CMaterialParams2.FallbackSpecularMasks);
-                Emissive = FillTextures(options, uvCount, true, CMaterialParams2.Emissive, CMaterialParams2.FallbackEmissive);
+                Diffuse = FillTextures(options, uvCount, Parameters.HasTopDiffuse, CMaterialParams2.Diffuse, CMaterialParams2.FallbackDiffuse, true, "VFX");
+                Normals = FillTextures(options, uvCount, Parameters.HasTopNormals, CMaterialParams2.Normals, CMaterialParams2.FallbackNormals, exception : "VFX");
+                SpecularMasks = FillTextures(options, uvCount, Parameters.HasTopSpecularMasks, CMaterialParams2.SpecularMasks, CMaterialParams2.FallbackSpecularMasks, exception : "VFX");
+                Emissive = FillTextures(options, uvCount, true, CMaterialParams2.Emissive, CMaterialParams2.FallbackEmissive, exception : "VFX");
+
             }
 
             {   // colors
@@ -142,7 +142,7 @@ public class Material : IDisposable
     /// <param name="triggers">list of texture parameter names by uv channel</param>
     /// <param name="fallback">fallback texture name to use if no top texture found</param>
     /// <param name="first">if no top texture, no fallback texture, then use the first texture found</param>
-    private Texture[] FillTextures(Options options, int uvCount, bool top, IReadOnlyList<string[]> triggers, string fallback, bool first = false)
+    private Texture[] FillTextures(Options options, int uvCount, bool top, IReadOnlyList<string[]> triggers, string fallback, bool first = false, string exception = null)
     {
         UTexture2D original;
         Texture transformed;
@@ -153,7 +153,7 @@ public class Material : IDisposable
         {
             for (int i = 0; i < textures.Length; i++)
             {
-                if (Parameters.TryGetTexture2d(out original, triggers[i]) && options.TryGetTexture(original, fix, out transformed))
+                if (Parameters.TryGetTexture2d(out original, exception, triggers[i]) && options.TryGetTexture(original, fix, out transformed))
                     textures[i] = transformed;
                 else if (i > 0 && textures[i - 1] != null)
                     textures[i] = textures[i - 1];
@@ -337,7 +337,74 @@ public class Material : IDisposable
         return ImGui.IsItemHovered() && ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left);
     }
 
-    public Texture GetSelectedTexture()
+    private Vector3 _scrolling = new (0.0f, 0.0f, 1.0f);
+    public void ImGuiTextureInspector(Texture fallback)
+    {
+        var texture = GetSelectedTexture() ?? fallback;
+        if (ImGui.BeginTable("texture_inspector", 2, ImGuiTableFlags.SizingStretchProp))
+        {
+            SnimGui.NoFramePaddingOnY(() =>
+            {
+                SnimGui.Layout("Type");ImGui.Text($" :  ({texture.Format}) {texture.Name}");
+                SnimGui.TooltipCopy("(?) Click to Copy Path", texture.Path);
+                SnimGui.Layout("Guid");ImGui.Text($" :  {texture.Guid.ToString(EGuidFormats.UniqueObjectGuid)}");
+                SnimGui.Layout("Import");ImGui.Text($" :  {texture.ImportedWidth}x{texture.ImportedHeight}");
+                SnimGui.Layout("Export");ImGui.Text($" :  {texture.Width}x{texture.Height}");
+                ImGui.EndTable();
+            });
+        }
+
+        var io = ImGui.GetIO();
+        var canvasP0 = ImGui.GetCursorScreenPos();
+        var canvasSize = ImGui.GetContentRegionAvail();
+        if (canvasSize.X < 50.0f) canvasSize.X = 50.0f;
+        if (canvasSize.Y < 50.0f) canvasSize.Y = 50.0f;
+        var canvasP1 = canvasP0 + canvasSize;
+        var origin = new Vector2(canvasP0.X + _scrolling.X, canvasP0.Y + _scrolling.Y);
+        var absoluteMiddle = canvasSize / 2.0f;
+
+        ImGui.InvisibleButton("texture_inspector_canvas", canvasSize, ImGuiButtonFlags.MouseButtonLeft);
+        if (ImGui.IsItemActive() && ImGui.IsMouseDragging(ImGuiMouseButton.Left))
+        {
+            _scrolling.X += io.MouseDelta.X;
+            _scrolling.Y += io.MouseDelta.Y;
+        }
+        else if (ImGui.IsItemHovered() && io.MouseWheel != 0.0f)
+        {
+            var zoomFactor = 1.0f + io.MouseWheel * 0.1f;
+            var mousePosCanvas = io.MousePos - origin;
+
+            _scrolling.X -= (mousePosCanvas.X - absoluteMiddle.X) * (zoomFactor - 1);
+            _scrolling.Y -= (mousePosCanvas.Y - absoluteMiddle.Y) * (zoomFactor - 1);
+            _scrolling.Z *= zoomFactor;
+            origin = new Vector2(canvasP0.X + _scrolling.X, canvasP0.Y + _scrolling.Y);
+        }
+
+        var drawList = ImGui.GetWindowDrawList();
+        drawList.AddRectFilled(canvasP0, canvasP1, 0xFF242424);
+        drawList.PushClipRect(canvasP0, canvasP1, true);
+        {
+            var sensitivity = _scrolling.Z * 25.0f;
+            for (float x = _scrolling.X % sensitivity; x < canvasSize.X; x += sensitivity)
+                drawList.AddLine(canvasP0 with { X = canvasP0.X + x }, canvasP1 with { X = canvasP0.X + x }, 0x28C8C8C8);
+            for (float y = _scrolling.Y % sensitivity; y < canvasSize.Y; y += sensitivity)
+                drawList.AddLine(canvasP0 with { Y = canvasP0.Y + y }, canvasP1 with { Y = canvasP0.Y + y }, 0x28C8C8C8);
+        }
+        drawList.PopClipRect();
+
+        drawList.PushClipRect(canvasP0, canvasP1, true);
+        {
+            var relativeMiddle = origin + absoluteMiddle;
+            var ratio = Math.Min(canvasSize.X / texture.Width, canvasSize.Y / texture.Height) * 0.95f * _scrolling.Z;
+            var size = new Vector2(texture.Width, texture.Height) * ratio / 2f;
+
+            drawList.AddImage(texture.GetPointer(), relativeMiddle - size, relativeMiddle + size);
+            drawList.AddRect(relativeMiddle - size, relativeMiddle + size, 0xFFFFFFFF);
+        }
+        drawList.PopClipRect();
+    }
+
+    private Texture GetSelectedTexture()
     {
         return SelectedTexture switch
         {

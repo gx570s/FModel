@@ -99,6 +99,7 @@ public class GameSelectorViewModel : ViewModel
 
     private IEnumerable<DetectedGame> EnumerateDetectedGames()
     {
+        yield return GetSteamGame(990080, "\\Phoenix"); // Hogwarts Legacy
         yield return GetUnrealEngineGame("Fortnite");
         yield return new DetectedGame { GameName = "Fortnite [LIVE]", GameDirectory = Constants._FN_LIVE_TRIGGER };
         yield return GetUnrealEngineGame("Pewee");
@@ -118,7 +119,6 @@ public class GameSelectorViewModel : ViewModel
         yield return GetMojangGame("MinecraftDungeons", "\\dungeons\\dungeons\\Dungeons\\Content\\Paks");
         yield return GetSteamGame(381210, "\\DeadByDaylight\\Content\\Paks"); // Dead By Daylight
         yield return GetSteamGame(578080, "\\TslGame\\Content\\Paks"); // PUBG
-        yield return GetSteamGame(1172380, "\\SwGame\\Content\\Paks"); // STAR WARS Jedi: Fallen Order™
         yield return GetSteamGame(677620, "\\PortalWars\\Content\\Paks"); // Splitgate
         yield return GetSteamGame(1172620, "\\Athena\\Content\\Paks"); // Sea of Thieves
         yield return GetSteamGame(1665460, "\\pak"); // eFootball 2023

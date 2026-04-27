@@ -20,7 +20,7 @@ public class Options
     public FGuid SelectedModel { get; private set; }
     public int SelectedSection { get; private set; }
     public int SelectedMorph { get; private set; }
-    public int SelectedAnimation{ get; private set; }
+    public int SelectedAnimation{ get; set; }
 
     public readonly Dictionary<FGuid, Model> Models;
     public readonly Dictionary<FGuid, Texture> Textures;
@@ -31,8 +31,7 @@ public class Options
 
     public readonly Dictionary<string, Texture> Icons;
 
-    private readonly ETexturePlatform _platform;
-    private readonly string _game;
+    private ETexturePlatform _platform;
 
     public Options()
     {
@@ -61,7 +60,6 @@ public class Options
         };
 
         _platform = UserSettings.Default.OverridedPlatform;
-        _game = Services.ApplicationService.ApplicationView.CUE4Parse.Provider.GameName.ToUpper();
 
         SelectModel(Guid.Empty);
     }
@@ -98,11 +96,6 @@ public class Options
 
         SelectedSection = 0;
         SelectedMorph = 0;
-    }
-
-    public void SelectAnimation(int animation)
-    {
-        SelectedAnimation = animation;
     }
 
     public void RemoveModel(FGuid guid)
@@ -180,12 +173,12 @@ public class Options
     public bool TryGetTexture(UTexture2D o, bool fix, out Texture texture)
     {
         var guid = o.LightingGuid;
-        if (!Textures.TryGetValue(guid, out texture) && o.GetMipByMaxSize(UserSettings.Default.PreviewMaxTextureSize) is { } mip)
+        if (!Textures.TryGetValue(guid, out texture) && o.GetFirstMip() is { } mip)
         {
             TextureDecoder.DecodeTexture(mip, o.Format, o.isNormalMap, _platform, out var data, out _);
+            if (fix) TextureHelper.FixChannels(o, mip, ref data);
 
             texture = new Texture(data, mip.SizeX, mip.SizeY, o);
-            if (fix) TextureHelper.FixChannels(_game, texture);
             Textures[guid] = texture;
         }
         return texture != null;

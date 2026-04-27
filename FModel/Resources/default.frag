@@ -90,7 +90,6 @@ uniform Light uLights[MAX_LIGHT_COUNT];
 uniform int uNumLights;
 uniform int uUvCount;
 uniform bool uHasVertexColors;
-uniform vec3 uSectionColor;
 uniform bool bVertexColors[6];
 uniform vec3 uViewPos;
 
@@ -212,11 +211,7 @@ vec3 CalcSpotLight(int layer, vec3 normals, Light light)
 
 void main()
 {
-    if (bVertexColors[1])
-    {
-        FragColor = vec4(uSectionColor, 1.0);
-    }
-    else if (bVertexColors[2] && uHasVertexColors)
+    if (bVertexColors[2] && uHasVertexColors)
     {
         FragColor = fColor;
     }
@@ -224,11 +219,11 @@ void main()
     {
         int layer = LayerToIndex();
         vec3 normals = ComputeNormals(layer);
-        FragColor = vec4(normals, 1.0);
+        FragColor = vec4(normals, 1);
     }
     else if (bVertexColors[4])
     {
-        FragColor = vec4(fTexCoords, 0.0, 1.0);
+        FragColor = vec4(fTexCoords, 0, 1);
     }
     else
     {
@@ -262,6 +257,7 @@ void main()
             result += uParameters.Emissive[layer].Color.rgb * emissive.rgb * uParameters.EmissiveMult;
         }
 
+        if (!bVertexColors[1])
         {
             result += CalcLight(layer, normals, uViewPos, vec3(0.75), 1.0, false);
 

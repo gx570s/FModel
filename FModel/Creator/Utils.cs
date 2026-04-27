@@ -146,9 +146,9 @@ public static class Utils
         return _applicationView.CUE4Parse.Provider.TryLoadObject(fullPath, out export);
     }
 
-    public static IEnumerable<UObject> LoadExports(string packagePath)
+    public static IEnumerable<UObject> LoadExports(string fullPath)
     {
-        return _applicationView.CUE4Parse.Provider.LoadAllObjects(packagePath);
+        return _applicationView.CUE4Parse.Provider.LoadObjectExports(fullPath);
     }
 
     public static float GetMaxFontSize(double sectorSize, SKTypeface typeface, string text, float degreeOfCertainty = 1f, float maxFont = 100f)

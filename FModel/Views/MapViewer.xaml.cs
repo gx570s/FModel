@@ -51,12 +51,14 @@ public partial class MapViewer
         if (File.Exists(path))
         {
             Log.Information("MiniMap.png successfully saved");
-            FLogger.Append(ELog.Information, () => FLogger.Text("Successfully saved 'MiniMap.png'", Constants.WHITE, true));
+            FLogger.AppendInformation();
+            FLogger.AppendText("Successfully saved 'MiniMap.png'", Constants.WHITE, true);
         }
         else
         {
             Log.Error("MiniMap.png could not be saved");
-            FLogger.Append(ELog.Error, () => FLogger.Text("Could not save 'MiniMap.png'", Constants.WHITE, true));
+            FLogger.AppendError();
+            FLogger.AppendText("Could not save 'MiniMap.png'", Constants.WHITE, true);
         }
     }
 

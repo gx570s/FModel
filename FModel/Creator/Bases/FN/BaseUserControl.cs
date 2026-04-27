@@ -37,9 +37,9 @@ public class BaseUserControl : UCreator
 
     public override void ParseForInfo()
     {
-        if (Object.TryGetValue(out FText optionDisplayName, "OptionDisplayName", "OptionText"))
+        if (Object.TryGetValue(out FText optionDisplayName, "OptionDisplayName"))
             DisplayName = optionDisplayName.Text.ToUpperInvariant();
-        if (Object.TryGetValue(out FText optionDescription, "OptionDescription", "OptionToolTip"))
+        if (Object.TryGetValue(out FText optionDescription, "OptionDescription"))
         {
             Description = optionDescription.Text;
 
@@ -48,12 +48,12 @@ public class BaseUserControl : UCreator
             Height += (int) _descriptionPaint.TextSize;
         }
 
-        if (Object.TryGetValue(out FStructFallback[] optionValues, "OptionValues", "Options"))
+        if (Object.TryGetValue(out FStructFallback[] optionValues, "OptionValues"))
         {
             _optionValues = new List<Options>();
             foreach (var option in optionValues)
             {
-                if (option.TryGetValue(out FText displayName, "DisplayName", "DisplayText"))
+                if (option.TryGetValue(out FText displayName, "DisplayName"))
                 {
                     var opt = new Options { Option = displayName.Text.ToUpperInvariant() };
                     if (option.TryGetValue(out FLinearColor color, "Value"))

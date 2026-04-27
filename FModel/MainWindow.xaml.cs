@@ -1,7 +1,6 @@
 using System;
 using System.ComponentModel;
 using System.Linq;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -48,7 +47,7 @@ public partial class MainWindow
     {
         var newOrUpdated = UserSettings.Default.ShowChangelog;
 #if !DEBUG
-        ApplicationService.ApiEndpointView.FModelApi.CheckForUpdates(UserSettings.Default.UpdateMode);
+        // ApplicationService.ApiEndpointView.FModelApi.CheckForUpdates(UserSettings.Default.UpdateMode);
 #endif
 
         switch (UserSettings.Default.AesReload)
@@ -64,29 +63,25 @@ public partial class MainWindow
 
         await _applicationView.CUE4Parse.Initialize();
         await _applicationView.AesManager.InitAes();
-        await _applicationView.UpdateProvider(true);
+        await _applicationView.AesManager.UpdateProvider(true);
 #if !DEBUG
         await _applicationView.CUE4Parse.InitInformation();
 #endif
-        await Task.WhenAll(
-            _applicationView.CUE4Parse.VerifyConsoleVariables(),
-            _applicationView.CUE4Parse.VerifyVirtualCache(),
-            _applicationView.CUE4Parse.VerifyContentBuildManifest(),
-            _applicationView.CUE4Parse.InitMappings(),
-            _applicationView.InitImGuiSettings(newOrUpdated),
-            _applicationView.InitVgmStream(),
-            _applicationView.InitOodle(),
-            Task.Run(() =>
-            {
-                if (UserSettings.Default.DiscordRpc == EDiscordRpc.Always)
-                    _discordHandler.Initialize(_applicationView.GameDisplayName);
-            })
-        ).ConfigureAwait(false);
+        await _applicationView.CUE4Parse.InitMappings();
+        await _applicationView.InitImGuiSettings(newOrUpdated);
+        await _applicationView.InitVgmStream();
+        await _applicationView.InitOodle();
+
+        if (UserSettings.Default.DiscordRpc == EDiscordRpc.Always)
+            _discordHandler.Initialize(_applicationView.CUE4Parse.Game);
 
 #if DEBUG
-        // await _threadWorkerView.Begin(cancellationToken =>
-        //     _applicationView.CUE4Parse.Extract(cancellationToken,
-        //         "fortnitegame/Content/Characters/Player/Female/Medium/Bodies/F_MED_Ballerina/Meshes/F_MED_Ballerina.uasset"));
+        //await _threadWorkerView.Begin(cancellationToken =>
+        //    _applicationView.CUE4Parse.Extract(cancellationToken,
+        //        "fortnitegame/Content/Characters/Player/Male/Medium/Bodies/M_Med_Soldier_04/Meshes/SK_M_Med_Soldier_04.uasset"));
+        //await _threadWorkerView.Begin(cancellationToken =>
+        //    _applicationView.CUE4Parse.Extract(cancellationToken,
+        //        "fortnitegame/Content/Animation/Game/MainPlayer/Emotes/Basketball_Tricks/Basketball_Tricks_Loop_CMM_M.uasset"));
 #endif
     }
 
@@ -178,11 +173,9 @@ public partial class MainWindow
         if (AssetsFolderName.SelectedItem is TreeItem folder)
         {
             await _threadWorkerView.Begin(cancellationToken => { _applicationView.CUE4Parse.ExportFolder(cancellationToken, folder); });
-            FLogger.Append(ELog.Information, () =>
-            {
-                FLogger.Text("Successfully exported ", Constants.WHITE);
-                FLogger.Link(folder.PathAtThisPoint, UserSettings.Default.RawDataDirectory, true);
-            });
+            FLogger.AppendInformation();
+            FLogger.AppendText("Successfully exported ", Constants.WHITE);
+            FLogger.AppendLink(folder.PathAtThisPoint, UserSettings.Default.RawDataDirectory, true);
         }
     }
 
@@ -191,11 +184,6 @@ public partial class MainWindow
         if (AssetsFolderName.SelectedItem is TreeItem folder)
         {
             await _threadWorkerView.Begin(cancellationToken => { _applicationView.CUE4Parse.SaveFolder(cancellationToken, folder); });
-            FLogger.Append(ELog.Information, () =>
-            {
-                FLogger.Text("Successfully saved ", Constants.WHITE);
-                FLogger.Link(folder.PathAtThisPoint, UserSettings.Default.PropertiesDirectory, true);
-            });
         }
     }
 
@@ -204,11 +192,6 @@ public partial class MainWindow
         if (AssetsFolderName.SelectedItem is TreeItem folder)
         {
             await _threadWorkerView.Begin(cancellationToken => { _applicationView.CUE4Parse.TextureFolder(cancellationToken, folder); });
-            FLogger.Append(ELog.Information, () =>
-            {
-                FLogger.Text("Successfully saved ", Constants.WHITE);
-                FLogger.Link(folder.PathAtThisPoint, UserSettings.Default.TextureDirectory, true);
-            });
         }
     }
 
@@ -233,8 +216,8 @@ public partial class MainWindow
         if (AssetsFolderName.SelectedItem is not TreeItem folder) return;
 
         _applicationView.CustomDirectories.Add(new CustomDirectory(folder.Header, folder.PathAtThisPoint));
-        FLogger.Append(ELog.Information, () =>
-            FLogger.Text($"Successfully saved '{folder.PathAtThisPoint}' as a new custom directory", Constants.WHITE, true));
+        FLogger.AppendInformation();
+        FLogger.AppendText($"Successfully saved '{folder.PathAtThisPoint}' as a new custom directory", Constants.WHITE, true);
     }
 
     private void OnCopyDirectoryPathClick(object sender, RoutedEventArgs e)

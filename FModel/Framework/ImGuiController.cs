@@ -3,14 +3,11 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
-using System.Windows;
-using System.Windows.Forms;
 using ImGuiNET;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Windowing.Desktop;
 using OpenTK.Windowing.GraphicsLibraryFramework;
 using ErrorCode = OpenTK.Graphics.OpenGL4.ErrorCode;
-using Keys = OpenTK.Windowing.GraphicsLibraryFramework.Keys;
 
 namespace FModel.Framework;
 
@@ -41,7 +38,6 @@ public class ImGuiController : IDisposable
     public ImFontPtr FontSemiBold;
 
     private readonly Vector2 _scaleFactor = Vector2.One;
-    public readonly float DpiScale = GetDpiScale();
 
     private static bool KHRDebugAvailable = false;
 
@@ -61,9 +57,9 @@ public class ImGuiController : IDisposable
         // ImGui.LoadIniSettingsFromDisk(_iniPath);
 
         var io = ImGui.GetIO();
-        FontNormal = io.Fonts.AddFontFromFileTTF("C:\\Windows\\Fonts\\segoeui.ttf", 16 * DpiScale);
-        FontBold = io.Fonts.AddFontFromFileTTF("C:\\Windows\\Fonts\\segoeuib.ttf", 16 * DpiScale);
-        FontSemiBold = io.Fonts.AddFontFromFileTTF("C:\\Windows\\Fonts\\seguisb.ttf", 16 * DpiScale);
+        FontNormal = io.Fonts.AddFontFromFileTTF("C:\\Windows\\Fonts\\segoeui.ttf", 16);
+        FontBold = io.Fonts.AddFontFromFileTTF("C:\\Windows\\Fonts\\segoeuib.ttf", 16);
+        FontSemiBold = io.Fonts.AddFontFromFileTTF("C:\\Windows\\Fonts\\seguisb.ttf", 16);
 
         io.BackendFlags |= ImGuiBackendFlags.RendererHasVtxOffset;
         io.ConfigFlags |= ImGuiConfigFlags.NavEnableKeyboard;
@@ -637,10 +633,5 @@ outputColor = color * texture(in_fontTexture, texCoord);
         {
             Debug.Print($"{title} ({i++}): {error}");
         }
-    }
-
-    public static float GetDpiScale()
-    {
-        return Math.Max((float)(Screen.PrimaryScreen.Bounds.Width / SystemParameters.PrimaryScreenWidth), (float)(Screen.PrimaryScreen.Bounds.Height / SystemParameters.PrimaryScreenHeight));
     }
 }

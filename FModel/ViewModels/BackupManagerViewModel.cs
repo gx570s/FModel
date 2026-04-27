@@ -6,7 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Data;
-using CUE4Parse.UE4.VirtualFileSystem;
+using CUE4Parse.UE4.Vfs;
 using FModel.Framework;
 using FModel.Services;
 using FModel.Settings;
@@ -103,16 +103,15 @@ public class BackupManagerViewModel : ViewModel
         if (new FileInfo(fullPath).Length > 0)
         {
             Log.Information("{FileName} successfully {Type}", fileName, type1);
-            FLogger.Append(ELog.Information, () =>
-            {
-                FLogger.Text($"Successfully {type1} ", Constants.WHITE);
-                FLogger.Link(fileName, fullPath, true);
-            });
+            FLogger.AppendInformation();
+            FLogger.AppendText($"Successfully {type1} ", Constants.WHITE);
+            FLogger.AppendLink(fileName, fullPath, true);
         }
         else
         {
             Log.Error("{FileName} could not be {Type}", fileName, type1);
-            FLogger.Append(ELog.Error, () => FLogger.Text($"Could not {type2} '{fileName}'", Constants.WHITE, true));
+            FLogger.AppendError();
+            FLogger.AppendText($"Could not {type2} '{fileName}'", Constants.WHITE, true);
         }
     }
 }

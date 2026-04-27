@@ -84,8 +84,8 @@ public class Model : IDisposable
     public bool HasSockets => Sockets.Count > 0;
     public readonly List<Socket> Sockets;
 
-    public bool HasMorphTargets => Morphs.Count > 0;
-    public readonly List<Morph> Morphs;
+    public bool HasMorphTargets => Morphs.Length > 0;
+    public readonly Morph[] Morphs;
 
     private string _attachedTo = string.Empty;
     private readonly List<string> _attachedFor = new ();
@@ -114,7 +114,7 @@ public class Model : IDisposable
         UvCount = 1;
         Box = new FBox(new FVector(-2f), new FVector(2f));
         Sockets = new List<Socket>();
-        Morphs = new List<Morph>();
+        Morphs = Array.Empty<Morph>();
         Transforms = new List<Transform>();
     }
 
@@ -150,13 +150,10 @@ public class Model : IDisposable
             Sockets.Add(new Socket(socket));
         }
 
-        for (var i = 0; i < export.MorphTargets.Length; i++)
+        Morphs = new Morph[export.MorphTargets.Length];
+        for (var i = 0; i < Morphs.Length; i++)
         {
-            if (!export.MorphTargets[i].TryLoad(out UMorphTarget morphTarget) ||
-                morphTarget.MorphLODModels.Length < 1 || morphTarget.MorphLODModels[0].Vertices.Length < 1)
-                continue;
-
-            Morphs.Add(new Morph(Vertices, VertexSize, morphTarget));
+            Morphs[i] = new Morph(Vertices, VertexSize, export.MorphTargets[i].Load<UMorphTarget>());
         }
     }
 
@@ -256,8 +253,8 @@ public class Model : IDisposable
         foreach (var socket in Sockets)
         {
             var boneMatrix = Matrix4x4.Identity;
-            if (HasSkeleton && Skeleton.BonesByLoweredName.TryGetValue(socket.BoneName.Text.ToLower(), out var bone))
-                boneMatrix = Skeleton.GetBoneMatrix(bone);
+            if (HasSkeleton && Skeleton.BonesIndicesByLoweredName.TryGetValue(socket.BoneName.Text.ToLower(), out var boneIndices))
+                boneMatrix = Skeleton.GetBoneMatrix(boneIndices);
 
             var socketRelation = boneMatrix * worldMatrix;
             foreach (var info in socket.AttachedModels)
@@ -358,7 +355,7 @@ public class Model : IDisposable
         if (HasSkeleton) Skeleton.Setup();
         if (HasMorphTargets)
         {
-            for (int morph = 0; morph < Morphs.Count; morph++)
+            for (uint morph = 0; morph < Morphs.Length; morph++)
             {
                 Morphs[morph].Setup();
                 if (morph == 0)
@@ -401,12 +398,7 @@ public class Model : IDisposable
         foreach (var section in Sections)
         {
             if (!section.Show) continue;
-            if (!outline)
-            {
-                shader.SetUniform("uSectionColor", section.Color);
-                Materials[section.MaterialIndex].Render(shader);
-            }
-
+            if (!outline) Materials[section.MaterialIndex].Render(shader);
             GL.DrawElementsInstanced(PrimitiveType.Triangles, section.FacesCount, DrawElementsType.UnsignedInt, section.FirstFaceIndexPtr, TransformsCount);
         }
         _vao.Unbind();
@@ -451,11 +443,10 @@ public class Model : IDisposable
         }
         Sockets.Clear();
         if (HasMorphTargets) _morphVbo.Dispose();
-        for (var morph = 0; morph < Morphs.Count; morph++)
+        for (var morph = 0; morph < Morphs.Length; morph++)
         {
             Morphs[morph]?.Dispose();
         }
-        Morphs.Clear();
 
         GL.DeleteProgram(_handle);
     }

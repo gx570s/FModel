@@ -1,4 +1,5 @@
-﻿using System.Linq;
+using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FModel.Extensions;
@@ -12,12 +13,14 @@ namespace FModel.ViewModels.ApiEndpoints;
 
 public class DynamicApiEndpoint : AbstractApiProvider
 {
-    public DynamicApiEndpoint(RestClient client) : base(client) { }
+    public DynamicApiEndpoint(RestClient client) : base(client)
+    {
+    }
 
     public async Task<AesResponse> GetAesKeysAsync(CancellationToken token, string url, string path)
     {
         var body = await GetRequestBody(token, url).ConfigureAwait(false);
-        var tokens = body.SelectTokens(path).ToArray();
+        var tokens = body.SelectTokens(path);
 
         var ret = new AesResponse { MainKey = Helper.FixKey(tokens.ElementAtOrDefault(0)?.ToString()) };
         if (tokens.ElementAtOrDefault(1) is JArray dynamicKeys)
@@ -30,12 +33,10 @@ public class DynamicApiEndpoint : AbstractApiProvider
                 ret.DynamicKeys.Add(new DynamicKey
                 {
                     Name = dynamicKey["name"]?.ToString(),
-                    Guid = guid.ToString(),
-                    Key = Helper.FixKey(key.ToString())
+                    Guid = guid.ToString(), Key = Helper.FixKey(key.ToString())
                 });
             }
         }
-
         return ret;
     }
 
@@ -47,9 +48,9 @@ public class DynamicApiEndpoint : AbstractApiProvider
     public async Task<MappingsResponse[]> GetMappingsAsync(CancellationToken token, string url, string path)
     {
         var body = await GetRequestBody(token, url).ConfigureAwait(false);
-        var tokens = body.SelectTokens(path).ToArray();
+        var tokens = body.SelectTokens(path);
 
-        var ret = new MappingsResponse[] { new() };
+        var ret = new MappingsResponse[] {new()};
         ret[0].Url = tokens.ElementAtOrDefault(0)?.ToString();
         if (tokens.ElementAtOrDefault(1) is not { } fileName)
             fileName = ret[0].Url?.SubstringAfterLast("/");
@@ -59,6 +60,7 @@ public class DynamicApiEndpoint : AbstractApiProvider
 
     public MappingsResponse[] GetMappings(CancellationToken token, string url, string path)
     {
+        if (string.IsNullOrEmpty(url)) return Array.Empty<MappingsResponse>();
         return GetMappingsAsync(token, url, path).GetAwaiter().GetResult();
     }
 

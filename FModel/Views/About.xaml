@@ -24,6 +24,13 @@
         </StackPanel>
 
         <StackPanel HorizontalAlignment="Center">
+            <TextBlock Text="Hogwarts Legacy" FontSize="15" FontWeight="700" Foreground="#9DA3DD" FontStretch="Expanded" />
+            <TextBlock Text="&#09;&#09;&#09;&#09;" FontSize="25" FontWeight="700" Height="2" Foreground="Transparent" HorizontalAlignment="Center" />
+        </StackPanel>
+        <TextBlock FontSize="12" Foreground="#727272" TextWrapping="Wrap" Margin="0 0 0 30"
+                   Text="This is a Hogwarts-Legacy-specific build. Originally by LongWarrior (https://github.com/LongerWarrior/FModel/releases/tag/HW_1.0.0.0). Updated by ifonlythatweretrue to match the new skeletal mesh serialisation adopted in Jan 2025." />
+
+        <StackPanel HorizontalAlignment="Center">
             <TextBlock Text="History" FontSize="15" FontWeight="700" Foreground="#9DA3DD" FontStretch="Expanded" />
             <TextBlock Text="&#09;&#09;&#09;&#09;" FontSize="25" FontWeight="700" Height="2" Foreground="Transparent" HorizontalAlignment="Center" />
         </StackPanel>

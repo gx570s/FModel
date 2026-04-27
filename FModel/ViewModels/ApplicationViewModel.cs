@@ -6,7 +6,7 @@ using FModel.ViewModels.Commands;
 using FModel.Views;
 using FModel.Views.Resources.Controls;
 using Ionic.Zip;
-using Oodle.NET;
+using OodleDotNet;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -25,7 +25,7 @@ public class ApplicationViewModel : ViewModel
     public EBuildKind Build
     {
         get => _build;
-        private init
+        private set
         {
             SetProperty(ref _build, value);
             RaisePropertyChanged(nameof(TitleExtra));
@@ -36,7 +36,7 @@ public class ApplicationViewModel : ViewModel
     public FStatus Status
     {
         get => _status;
-        private init => SetProperty(ref _status, value);
+        set => SetProperty(ref _status, value);
     }
 
     public RightClickMenuCommand RightClickMenuCommand => _rightClickMenuCommand ??= new RightClickMenuCommand(this);
@@ -46,10 +46,9 @@ public class ApplicationViewModel : ViewModel
     public CopyCommand CopyCommand => _copyCommand ??= new CopyCommand(this);
     private CopyCommand _copyCommand;
 
-    public string InitialWindowTitle => $"FModel {UserSettings.Default.UpdateMode}";
-    public string GameDisplayName => CUE4Parse.Provider.GameDisplayName ?? "Unknown";
     public string TitleExtra =>
-        $"({(CUE4Parse.Game == FGame.Unknown && UserSettings.Default.ManualGames.TryGetValue(UserSettings.Default.GameDirectory, out var settings) ? settings.OverridedGame : UserSettings.Default.OverridedGame[CUE4Parse.Game])})" +
+        $"{UserSettings.Default.UpdateMode} - {CUE4Parse.Game.GetDescription()} (" + // FModel {UpdateMode} - {FGame} ({UE}) ({Build})
+        $"{(CUE4Parse.Game == FGame.Unknown && UserSettings.Default.ManualGames.TryGetValue(UserSettings.Default.GameDirectory, out var settings) ? settings.OverridedGame : UserSettings.Default.OverridedGame[CUE4Parse.Game])})" +
         $"{(Build != EBuildKind.Release ? $" ({Build})" : "")}";
 
     public LoadingModesViewModel LoadingModes { get; }
@@ -59,7 +58,7 @@ public class ApplicationViewModel : ViewModel
     public AesManagerViewModel AesManager { get; }
     public AudioPlayerViewModel AudioPlayer { get; }
     public MapViewerViewModel MapViewer { get; }
-    private OodleCompressor _oodle;
+    private Oodle _oodle;
 
     public ApplicationViewModel()
     {
@@ -74,13 +73,6 @@ public class ApplicationViewModel : ViewModel
         LoadingModes = new LoadingModesViewModel();
 
         AvoidEmptyGameDirectoryAndSetEGame(false);
-        if (UserSettings.Default.GameDirectory is null)
-        {
-            //If no game is selected, many things will break before a shutdown request is processed in the normal way.
-            //A hard exit is preferable to an unhandled expection in this case
-            Environment.Exit(0);
-        }
-
         CUE4Parse = new CUE4ParseViewModel(UserSettings.Default.GameDirectory);
         CustomDirectories = new CustomDirectoriesViewModel(CUE4Parse.Game, UserSettings.Default.GameDirectory);
         SettingsView = new SettingsViewModel(CUE4Parse.Game);
@@ -103,20 +95,6 @@ public class ApplicationViewModel : ViewModel
         if (!bAlreadyLaunched || gameDirectory == gameLauncherViewModel.SelectedDetectedGame.GameDirectory) return;
 
         RestartWithWarning();
-    }
-
-    public async Task UpdateProvider(bool isLaunch)
-    {
-        if (!isLaunch && !AesManager.HasChange) return;
-
-        CUE4Parse.ClearProvider();
-        await ApplicationService.ThreadWorkerView.Begin(cancellationToken =>
-        {
-            CUE4Parse.LoadVfs(cancellationToken, AesManager.AesKeys);
-            CUE4Parse.Provider.LoadIniConfigs();
-            AesManager.SetAesKeys();
-        });
-        RaisePropertyChanged(nameof(GameDisplayName));
     }
 
     public void RestartWithWarning()
@@ -175,7 +153,8 @@ public class ApplicationViewModel : ViewModel
         }
         else
         {
-            FLogger.Append(ELog.Error, () => FLogger.Text("Could not download VgmStream", Constants.WHITE, true));
+            FLogger.AppendError();
+            FLogger.AppendText("Could not download VgmStream", Constants.WHITE, true);
         }
     }
 
@@ -197,25 +176,25 @@ public class ApplicationViewModel : ViewModel
         if (File.Exists("oo2core_8_win64.dll"))
             File.Delete("oo2core_8_win64.dll");
 
-        _oodle = new OodleCompressor(oodlePath);
+        _oodle = new Oodle(oodlePath);
 
         unsafe
         {
-            OodleCUE4.DecompressFunc = (bufferPtr, bufferSize, outputPtr, outputSize, a, b, c, d, e, f, g, h, i, threadModule) =>
-                _oodle.Decompress(new IntPtr(bufferPtr), bufferSize, new IntPtr(outputPtr), outputSize,
-                    (OodleLZ_FuzzSafe) a, (OodleLZ_CheckCRC) b, (OodleLZ_Verbosity) c, d, e, f, g, h, i, (OodleLZ_Decode_ThreadPhase) threadModule);
+			OodleCUE4.DecompressFunc = (bufferPtr, bufferSize, outputPtr, outputSize, a, b, c, d, e, f, g, h, i, threadModule) =>
+				_oodle.Decompress(new IntPtr(bufferPtr), bufferSize, new IntPtr(outputPtr), outputSize);
         }
     }
 
     public async Task InitImGuiSettings(bool forceDownload)
     {
         var imgui = Path.Combine(/*UserSettings.Default.OutputDirectory, ".data", */"imgui.ini");
-        if (File.Exists(imgui) && !forceDownload) return;
+        if (!forceDownload || File.Exists(imgui)) return;
 
         await ApplicationService.ApiEndpointView.DownloadFileAsync("https://cdn.fmodel.app/d/configurations/imgui.ini", imgui);
         if (new FileInfo(imgui).Length == 0)
         {
-            FLogger.Append(ELog.Error, () => FLogger.Text("Could not download ImGui settings", Constants.WHITE, true));
+            FLogger.AppendError();
+            FLogger.AppendText("Could not download ImGui settings", Constants.WHITE, true);
         }
     }
 }

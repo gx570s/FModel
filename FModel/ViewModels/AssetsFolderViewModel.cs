@@ -4,8 +4,7 @@ using System.ComponentModel;
 using System.Text;
 using System.Windows;
 using System.Windows.Data;
-using CUE4Parse.UE4.Versions;
-using CUE4Parse.UE4.VirtualFileSystem;
+using CUE4Parse.UE4.Vfs;
 using FModel.Framework;
 using FModel.Services;
 
@@ -48,8 +47,8 @@ public class TreeItem : ViewModel
         private set => SetProperty(ref _mountPoint, value);
     }
 
-    private FPackageFileVersion _version;
-    public FPackageFileVersion Version
+    private int _version;
+    public int Version
     {
         get => _version;
         private set => SetProperty(ref _version, value);
@@ -60,7 +59,7 @@ public class TreeItem : ViewModel
     public RangeObservableCollection<TreeItem> Folders { get; }
     public ICollectionView FoldersView { get; }
 
-    public TreeItem(string header, string archive, string mountPoint, FPackageFileVersion version, string pathHere)
+    public TreeItem(string header, string archive, string mountPoint, int version, string pathHere)
     {
         Header = header;
         Archive = archive;
@@ -128,7 +127,7 @@ public class AssetsFolderViewModel
                         if (lastNode == null)
                         {
                             var nodePath = builder.ToString();
-                            lastNode = new TreeItem(folder, item.Archive, entry.Vfs.MountPoint, entry.Vfs.Ver, nodePath[..^1]);
+                            lastNode = new TreeItem(folder, item.Archive, entry.Vfs.MountPoint, entry.Vfs.Ver.Value, nodePath[..^1]);
                             lastNode.Folders.SetSuppressionState(true);
                             lastNode.AssetsList.Assets.SetSuppressionState(true);
                             parentNode.Add(lastNode);
